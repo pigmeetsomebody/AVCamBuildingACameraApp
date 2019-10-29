@@ -1,28 +1,87 @@
-<?xml version="1.0" encoding="utf-8" standalone="no"?>
-<Scheme version="1.3" LastUpgradeVersion="1100">
-	<AnalyzeAction buildConfiguration="Debug" />
-	<ArchiveAction buildConfiguration="Release" revealArchiveInOrganizer="YES" />
-	<TestAction selectedDebuggerIdentifier="Xcode.DebuggerFoundation.Debugger.LLDB" buildConfiguration="Debug" codeCoverageEnabled="NO" selectedLauncherIdentifier="Xcode.DebuggerFoundation.Launcher.LLDB" shouldUseLaunchSchemeArgsEnv="YES">
-		<Testables />
-		<MacroExpansion>
-			<BuildableReference BuildableIdentifier="primary" BlueprintName="AVCam" ReferencedContainer="container:AVCam Objective-C.xcodeproj" BuildableName="AVCam.app" BlueprintIdentifier="220626581A1E330400A45150" />
-		</MacroExpansion>
-	</TestAction>
-	<ProfileAction useCustomWorkingDirectory="NO" buildConfiguration="Release" savedToolIdentifier="" debugDocumentVersioning="YES" shouldUseLaunchSchemeArgsEnv="YES">
-		<BuildableProductRunnable runnableDebuggingMode="0">
-			<BuildableReference BuildableName="AVCam.app" BuildableIdentifier="primary" BlueprintName="AVCam" ReferencedContainer="container:AVCam Objective-C.xcodeproj" BlueprintIdentifier="220626581A1E330400A45150" />
-		</BuildableProductRunnable>
-	</ProfileAction>
-	<BuildAction buildImplicitDependencies="YES" parallelizeBuildables="YES">
-		<BuildActionEntries>
-			<BuildActionEntry buildForTesting="YES" buildForAnalyzing="YES" buildForArchiving="YES" buildForRunning="YES" buildForProfiling="YES">
-				<BuildableReference BuildableIdentifier="primary" ReferencedContainer="container:AVCam Objective-C.xcodeproj" BlueprintName="AVCam" BuildableName="AVCam.app" BlueprintIdentifier="220626581A1E330400A45150" />
-			</BuildActionEntry>
-		</BuildActionEntries>
-	</BuildAction>
-	<LaunchAction selectedLauncherIdentifier="Xcode.DebuggerFoundation.Launcher.LLDB" useCustomWorkingDirectory="NO" debugServiceExtension="internal" ignoresPersistentStateOnLaunch="NO" launchStyle="0" selectedDebuggerIdentifier="Xcode.DebuggerFoundation.Debugger.LLDB" debugDocumentVersioning="YES" buildConfiguration="Debug" allowLocationSimulation="YES">
-		<BuildableProductRunnable runnableDebuggingMode="0">
-			<BuildableReference BlueprintName="AVCam" ReferencedContainer="container:AVCam Objective-C.xcodeproj" BuildableIdentifier="primary" BuildableName="AVCam.app" BlueprintIdentifier="220626581A1E330400A45150" />
-		</BuildableProductRunnable>
-	</LaunchAction>
+<?xml version="1.0" encoding="UTF-8"?>
+<Scheme
+   LastUpgradeVersion = "1100"
+   version = "1.3">
+   <BuildAction
+      parallelizeBuildables = "YES"
+      buildImplicitDependencies = "YES">
+      <BuildActionEntries>
+         <BuildActionEntry
+            buildForTesting = "YES"
+            buildForRunning = "YES"
+            buildForProfiling = "YES"
+            buildForArchiving = "YES"
+            buildForAnalyzing = "YES">
+            <BuildableReference
+               BuildableIdentifier = "primary"
+               BlueprintIdentifier = "220626581A1E330400A45150"
+               BuildableName = "AVCam.app"
+               BlueprintName = "AVCam"
+               ReferencedContainer = "container:AVCam Objective-C.xcodeproj">
+            </BuildableReference>
+         </BuildActionEntry>
+      </BuildActionEntries>
+   </BuildAction>
+   <TestAction
+      buildConfiguration = "Debug"
+      selectedDebuggerIdentifier = "Xcode.DebuggerFoundation.Debugger.LLDB"
+      selectedLauncherIdentifier = "Xcode.DebuggerFoundation.Launcher.LLDB"
+      shouldUseLaunchSchemeArgsEnv = "YES">
+      <Testables>
+      </Testables>
+      <MacroExpansion>
+         <BuildableReference
+            BuildableIdentifier = "primary"
+            BlueprintIdentifier = "220626581A1E330400A45150"
+            BuildableName = "AVCam.app"
+            BlueprintName = "AVCam"
+            ReferencedContainer = "container:AVCam Objective-C.xcodeproj">
+         </BuildableReference>
+      </MacroExpansion>
+   </TestAction>
+   <LaunchAction
+      buildConfiguration = "Debug"
+      selectedDebuggerIdentifier = "Xcode.DebuggerFoundation.Debugger.LLDB"
+      selectedLauncherIdentifier = "Xcode.DebuggerFoundation.Launcher.LLDB"
+      launchStyle = "0"
+      useCustomWorkingDirectory = "NO"
+      ignoresPersistentStateOnLaunch = "NO"
+      debugDocumentVersioning = "YES"
+      debugServiceExtension = "internal"
+      allowLocationSimulation = "YES">
+      <BuildableProductRunnable
+         runnableDebuggingMode = "0">
+         <BuildableReference
+            BuildableIdentifier = "primary"
+            BlueprintIdentifier = "220626581A1E330400A45150"
+            BuildableName = "AVCam.app"
+            BlueprintName = "AVCam"
+            ReferencedContainer = "container:AVCam Objective-C.xcodeproj">
+         </BuildableReference>
+      </BuildableProductRunnable>
+   </LaunchAction>
+   <ProfileAction
+      buildConfiguration = "Release"
+      shouldUseLaunchSchemeArgsEnv = "YES"
+      savedToolIdentifier = ""
+      useCustomWorkingDirectory = "NO"
+      debugDocumentVersioning = "YES">
+      <BuildableProductRunnable
+         runnableDebuggingMode = "0">
+         <BuildableReference
+            BuildableIdentifier = "primary"
+            BlueprintIdentifier = "220626581A1E330400A45150"
+            BuildableName = "AVCam.app"
+            BlueprintName = "AVCam"
+            ReferencedContainer = "container:AVCam Objective-C.xcodeproj">
+         </BuildableReference>
+      </BuildableProductRunnable>
+   </ProfileAction>
+   <AnalyzeAction
+      buildConfiguration = "Debug">
+   </AnalyzeAction>
+   <ArchiveAction
+      buildConfiguration = "Release"
+      revealArchiveInOrganizer = "YES">
+   </ArchiveAction>
 </Scheme>

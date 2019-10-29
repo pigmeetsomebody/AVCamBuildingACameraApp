@@ -183,6 +183,7 @@ class CameraViewController: UIViewController, AVCaptureFileOutputRecordingDelega
     
     private let session = AVCaptureSession()
     private var isSessionRunning = false
+    private var selectedSemanticSegmentationMatteTypes = [AVSemanticSegmentationMatte.MatteType]()
     
     // Communicate with the session and other session objects on this queue.
     private let sessionQueue = DispatchQueue(label: "session queue")
@@ -290,6 +291,7 @@ class CameraViewController: UIViewController, AVCaptureFileOutputRecordingDelega
             photoOutput.isDepthDataDeliveryEnabled = photoOutput.isDepthDataDeliverySupported
             photoOutput.isPortraitEffectsMatteDeliveryEnabled = photoOutput.isPortraitEffectsMatteDeliverySupported
             photoOutput.enabledSemanticSegmentationMatteTypes = photoOutput.availableSemanticSegmentationMatteTypes
+            selectedSemanticSegmentationMatteTypes = photoOutput.availableSemanticSegmentationMatteTypes
             photoOutput.maxPhotoQualityPrioritization = .quality
             livePhotoMode = photoOutput.isLivePhotoCaptureSupported ? .on : .off
             depthDataDeliveryMode = photoOutput.isDepthDataDeliverySupported ? .on : .off
@@ -383,7 +385,8 @@ class CameraViewController: UIViewController, AVCaptureFileOutputRecordingDelega
                 }
                 
                 if !self.photoOutput.availableSemanticSegmentationMatteTypes.isEmpty {
-                    self.photoOutput.enabledSemanticSegmentationMatteTypes = self.photoOutput.availableSemanticSegmentationMatteTypes
+					self.photoOutput.enabledSemanticSegmentationMatteTypes = self.photoOutput.availableSemanticSegmentationMatteTypes
+                    self.selectedSemanticSegmentationMatteTypes = self.photoOutput.availableSemanticSegmentationMatteTypes
                     
                     DispatchQueue.main.async {
                         self.semanticSegmentationMatteDeliveryButton.isEnabled = (self.depthDataDeliveryMode == .on) ? true : false
@@ -529,6 +532,7 @@ class CameraViewController: UIViewController, AVCaptureFileOutputRecordingDelega
                     self.photoOutput.isDepthDataDeliveryEnabled = self.photoOutput.isDepthDataDeliverySupported
                     self.photoOutput.isPortraitEffectsMatteDeliveryEnabled = self.photoOutput.isPortraitEffectsMatteDeliverySupported
                     self.photoOutput.enabledSemanticSegmentationMatteTypes = self.photoOutput.availableSemanticSegmentationMatteTypes
+                    self.selectedSemanticSegmentationMatteTypes = self.photoOutput.availableSemanticSegmentationMatteTypes
                     self.photoOutput.maxPhotoQualityPrioritization = .quality
                     
                     self.session.commitConfiguration()
@@ -638,8 +642,8 @@ class CameraViewController: UIViewController, AVCaptureFileOutputRecordingDelega
                 && self.photoOutput.isPortraitEffectsMatteDeliveryEnabled)
             
             if photoSettings.isDepthDataDeliveryEnabled {
-                if !self.photoOutput.enabledSemanticSegmentationMatteTypes.isEmpty {
-                    photoSettings.enabledSemanticSegmentationMatteTypes = self.photoOutput.enabledSemanticSegmentationMatteTypes
+                if !self.photoOutput.availableSemanticSegmentationMatteTypes.isEmpty {
+                    photoSettings.enabledSemanticSegmentationMatteTypes = self.selectedSemanticSegmentationMatteTypes
                 }
             }
             
@@ -808,7 +812,7 @@ class CameraViewController: UIViewController, AVCaptureFileOutputRecordingDelega
         let itemSelectionViewController = ItemSelectionViewController(delegate: self,
                                                                       identifier: semanticSegmentationTypeItemSelectionIdentifier,
                                                                       allItems: photoOutput.availableSemanticSegmentationMatteTypes,
-                                                                      selectedItems: photoOutput.enabledSemanticSegmentationMatteTypes,
+                                                                      selectedItems: selectedSemanticSegmentationMatteTypes,
                                                                       allowsMultipleSelection: true)
         
         presentItemSelectionViewController(itemSelectionViewController)
@@ -832,7 +836,7 @@ class CameraViewController: UIViewController, AVCaptureFileOutputRecordingDelega
         
         if identifier == semanticSegmentationTypeItemSelectionIdentifier {
             sessionQueue.async {
-                self.photoOutput.enabledSemanticSegmentationMatteTypes = selectedItems
+                self.selectedSemanticSegmentationMatteTypes = selectedItems
             }
         }
     }

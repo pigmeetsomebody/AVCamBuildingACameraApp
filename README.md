@@ -212,8 +212,8 @@ photoSettings.isPortraitEffectsMatteDeliveryEnabled = (self.portraitEffectsMatte
     && self.photoOutput.isPortraitEffectsMatteDeliveryEnabled)
 
 if photoSettings.isDepthDataDeliveryEnabled {
-    if !self.photoOutput.enabledSemanticSegmentationMatteTypes.isEmpty {
-        photoSettings.enabledSemanticSegmentationMatteTypes = self.photoOutput.enabledSemanticSegmentationMatteTypes
+    if !self.photoOutput.availableSemanticSegmentationMatteTypes.isEmpty {
+        photoSettings.enabledSemanticSegmentationMatteTypes = self.selectedSemanticSegmentationMatteTypes
     }
 }
 
@@ -340,38 +340,39 @@ For more information about incorporating Live Photo capture into your app, see [
 Using `AVCapturePhotoOutput`, AVCam queries the capture device to see whether its configuration can deliver depth data and a portrait effects matte to still images. If the input device supports either of these modes, and you enable them in the capture settings, the camera attaches depth and portrait effects matte as auxiliary metadata on a per-photo request basis. If the device supports delivery of depth data, portrait effects matte, or Live Photos, the app shows a button, used to toggle the settings for enabling or disabling the feature.
 
 ``` swift
-if self.photoOutput.isDepthDataDeliverySupported {
-    self.photoOutput.isDepthDataDeliveryEnabled = true
-    
-    DispatchQueue.main.async {
-        self.depthDataDeliveryButton.isEnabled = true
-    }
-}
-
-if self.photoOutput.isPortraitEffectsMatteDeliverySupported {
-    self.photoOutput.isPortraitEffectsMatteDeliveryEnabled = true
-    
-    DispatchQueue.main.async {
-        self.portraitEffectsMatteDeliveryButton.isEnabled = true
-    }
-}
-
-if !self.photoOutput.availableSemanticSegmentationMatteTypes.isEmpty {
-    self.photoOutput.enabledSemanticSegmentationMatteTypes = self.photoOutput.availableSemanticSegmentationMatteTypes
-    
-    DispatchQueue.main.async {
-        self.semanticSegmentationMatteDeliveryButton.isEnabled = (self.depthDataDeliveryMode == .on) ? true : false
-    }
-}
-
-DispatchQueue.main.async {
-    self.livePhotoModeButton.isHidden = false
-    self.depthDataDeliveryButton.isHidden = false
-    self.portraitEffectsMatteDeliveryButton.isHidden = false
-    self.semanticSegmentationMatteDeliveryButton.isHidden = false
-    self.photoQualityPrioritizationSegControl.isHidden = false
-    self.photoQualityPrioritizationSegControl.isEnabled = true
-}
+           if self.photoOutput.isDepthDataDeliverySupported {
+               self.photoOutput.isDepthDataDeliveryEnabled = true
+               
+               DispatchQueue.main.async {
+                   self.depthDataDeliveryButton.isEnabled = true
+               }
+           }
+           
+           if self.photoOutput.isPortraitEffectsMatteDeliverySupported {
+               self.photoOutput.isPortraitEffectsMatteDeliveryEnabled = true
+               
+               DispatchQueue.main.async {
+                   self.portraitEffectsMatteDeliveryButton.isEnabled = true
+               }
+           }
+           
+           if !self.photoOutput.availableSemanticSegmentationMatteTypes.isEmpty {
+self.photoOutput.enabledSemanticSegmentationMatteTypes = self.photoOutput.availableSemanticSegmentationMatteTypes
+               self.selectedSemanticSegmentationMatteTypes = self.photoOutput.availableSemanticSegmentationMatteTypes
+               
+               DispatchQueue.main.async {
+                   self.semanticSegmentationMatteDeliveryButton.isEnabled = (self.depthDataDeliveryMode == .on) ? true : false
+               }
+           }
+           
+           DispatchQueue.main.async {
+               self.livePhotoModeButton.isHidden = false
+               self.depthDataDeliveryButton.isHidden = false
+               self.portraitEffectsMatteDeliveryButton.isHidden = false
+               self.semanticSegmentationMatteDeliveryButton.isHidden = false
+               self.photoQualityPrioritizationSegControl.isHidden = false
+               self.photoQualityPrioritizationSegControl.isEnabled = true
+           }
 ```
 [View in Source][39]
 

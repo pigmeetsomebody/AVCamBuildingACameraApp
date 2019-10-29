@@ -97,6 +97,7 @@ typedef NS_ENUM(NSInteger, AVCamPortraitEffectsMatteDeliveryMode) {
 @property (weak, nonatomic) IBOutlet UIButton *semanticSegmentationMatteDeliveryButton;
 
 @property (nonatomic) AVCapturePhotoOutput* photoOutput;
+@property (nonatomic) NSArray<AVSemanticSegmentationMatteType>* selectedSemanticSegmentationMatteTypes;
 @property (nonatomic) NSMutableDictionary<NSNumber* , AVCamPhotoCaptureDelegate* >* inProgressPhotoCaptureDelegates;
 @property (nonatomic) NSInteger inProgressLivePhotoCapturesCount;
 
@@ -380,6 +381,7 @@ typedef NS_ENUM(NSInteger, AVCamPortraitEffectsMatteDeliveryMode) {
         self.photoOutput.depthDataDeliveryEnabled = self.photoOutput.depthDataDeliverySupported;
         self.photoOutput.portraitEffectsMatteDeliveryEnabled = self.photoOutput.portraitEffectsMatteDeliverySupported;
 		self.photoOutput.enabledSemanticSegmentationMatteTypes = self.photoOutput.availableSemanticSegmentationMatteTypes;
+        self.selectedSemanticSegmentationMatteTypes = self.photoOutput.enabledSemanticSegmentationMatteTypes;
         self.photoOutput.maxPhotoQualityPrioritization = AVCapturePhotoQualityPrioritizationQuality;
         
         self.livePhotoMode = self.photoOutput.livePhotoCaptureSupported ? AVCamLivePhotoModeOn : AVCamLivePhotoModeOff;
@@ -473,6 +475,7 @@ typedef NS_ENUM(NSInteger, AVCamPortraitEffectsMatteDeliveryMode) {
 			
 			if (self.photoOutput.availableSemanticSegmentationMatteTypes.count > 0) {
 				self.photoOutput.enabledSemanticSegmentationMatteTypes = self.photoOutput.availableSemanticSegmentationMatteTypes;
+				self.selectedSemanticSegmentationMatteTypes = self.photoOutput.availableSemanticSegmentationMatteTypes;
 				
 				dispatch_async(dispatch_get_main_queue(), ^{
 					self.semanticSegmentationMatteDeliveryButton.enabled = (self.depthDataDeliveryMode == AVCamDepthDataDeliveryModeOn) ? YES : NO;
@@ -618,7 +621,8 @@ typedef NS_ENUM(NSInteger, AVCamPortraitEffectsMatteDeliveryMode) {
             self.photoOutput.livePhotoCaptureEnabled = self.photoOutput.livePhotoCaptureSupported;
             self.photoOutput.depthDataDeliveryEnabled = self.photoOutput.depthDataDeliverySupported;
             self.photoOutput.portraitEffectsMatteDeliveryEnabled = self.photoOutput.portraitEffectsMatteDeliverySupported;
-			self.photoOutput.enabledSemanticSegmentationMatteTypes = self.photoOutput.availableSemanticSegmentationMatteTypes;
+            self.photoOutput.enabledSemanticSegmentationMatteTypes = self.photoOutput.availableSemanticSegmentationMatteTypes;
+            self.selectedSemanticSegmentationMatteTypes = self.photoOutput.availableSemanticSegmentationMatteTypes;
             self.photoOutput.maxPhotoQualityPrioritization = AVCapturePhotoQualityPrioritizationQuality;
             
             [self.session commitConfiguration];
@@ -720,7 +724,7 @@ monitorSubjectAreaChange:(BOOL)monitorSubjectAreaChange
         photoSettings.portraitEffectsMatteDeliveryEnabled = (self.portraitEffectsMatteDeliveryMode == AVCamPortraitEffectsMatteDeliveryModeOn && self.photoOutput.isPortraitEffectsMatteDeliveryEnabled);
 		
 		if ( photoSettings.depthDataDeliveryEnabled && self.photoOutput.availableSemanticSegmentationMatteTypes.count > 0 ) {
-			photoSettings.enabledSemanticSegmentationMatteTypes = self.photoOutput.enabledSemanticSegmentationMatteTypes;
+            photoSettings.enabledSemanticSegmentationMatteTypes = self.selectedSemanticSegmentationMatteTypes;
 		}
 		
         photoSettings.photoQualityPrioritization = self.photoQualityPrioritizationMode;
@@ -878,7 +882,7 @@ monitorSubjectAreaChange:(BOOL)monitorSubjectAreaChange
 }
 - (IBAction)toggleSemanticSegmentationMatteDeliveryMode:(UIButton*)semanticSegmentationMatteDeliveryButton
 {
-	ItemSelectionViewController *itemSelectionViewController = [[ItemSelectionViewController alloc]initWithDelegate:self identifier:nil allItems:self.photoOutput.availableSemanticSegmentationMatteTypes selectedItems:self.photoOutput.enabledSemanticSegmentationMatteTypes allowMultipleSelection:YES];
+	ItemSelectionViewController *itemSelectionViewController = [[ItemSelectionViewController alloc]initWithDelegate:self identifier:nil allItems:self.photoOutput.availableSemanticSegmentationMatteTypes selectedItems:self.selectedSemanticSegmentationMatteTypes allowMultipleSelection:YES];
 	
 	[self presentItemSelectionViewController:itemSelectionViewController];
 }
@@ -897,7 +901,7 @@ monitorSubjectAreaChange:(BOOL)monitorSubjectAreaChange
 - (void)itemSelectionViewController:(ItemSelectionViewController *)it didFinishSelectingItems:(NSArray *)selectedItems
 {
 	dispatch_async(self.sessionQueue, ^{
-		self.photoOutput.enabledSemanticSegmentationMatteTypes = selectedItems;
+        self.selectedSemanticSegmentationMatteTypes = selectedItems;
 	});
 }
 
