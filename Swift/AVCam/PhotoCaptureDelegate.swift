@@ -28,9 +28,11 @@ class PhotoCaptureProcessor: NSObject {
     private var portraitEffectsMatteData: Data?
     
     private var semanticSegmentationMatteDataArray = [Data]()
-    
     private var maxPhotoProcessingTime: CMTime?
-    
+
+    // Save the location of captured photos
+    var location: CLLocation?
+
     init(with requestedPhotoSettings: AVCapturePhotoSettings,
          willCapturePhotoAnimation: @escaping () -> Void,
          livePhotoCaptureHandler: @escaping (Bool) -> Void,
@@ -56,7 +58,6 @@ class PhotoCaptureProcessor: NSObject {
         
         completionHandler(self)
     }
-    
 }
 
 extension PhotoCaptureProcessor: AVCapturePhotoCaptureDelegate {
@@ -109,6 +110,8 @@ extension PhotoCaptureProcessor: AVCapturePhotoCaptureDelegate {
             imageOption = .auxiliarySemanticSegmentationSkinMatte
         case .teeth:
             imageOption = .auxiliarySemanticSegmentationTeethMatte
+        case .glasses:
+            imageOption = .auxiliarySemanticSegmentationGlassesMatte
         default:
             print("This semantic segmentation type is not supported!")
             return
@@ -134,9 +137,10 @@ extension PhotoCaptureProcessor: AVCapturePhotoCaptureDelegate {
     /// - Tag: DidFinishProcessingPhoto
     func photoOutput(_ output: AVCapturePhotoOutput, didFinishProcessingPhoto photo: AVCapturePhoto, error: Error?) {
         photoProcessingHandler(false)
-        
+
         if let error = error {
             print("Error capturing photo: \(error)")
+            return
         } else {
             photoData = photo.fileDataRepresentation()
         }
@@ -186,13 +190,13 @@ extension PhotoCaptureProcessor: AVCapturePhotoCaptureDelegate {
             didFinish()
             return
         }
-        
+
         guard let photoData = photoData else {
             print("No photo data resource")
             didFinish()
             return
         }
-        
+
         PHPhotoLibrary.requestAuthorization { status in
             if status == .authorized {
                 PHPhotoLibrary.shared().performChanges({
@@ -200,6 +204,9 @@ extension PhotoCaptureProcessor: AVCapturePhotoCaptureDelegate {
                     let creationRequest = PHAssetCreationRequest.forAsset()
                     options.uniformTypeIdentifier = self.requestedPhotoSettings.processedFileType.map { $0.rawValue }
                     creationRequest.addResource(with: .photo, data: photoData, options: options)
+                    
+                    // Specify the location the photo was taken
+                    creationRequest.location = self.location
                     
                     if let livePhotoCompanionMovieURL = self.livePhotoCompanionMovieURL {
                         let livePhotoCompanionMovieFileOptions = PHAssetResourceCreationOptions()

@@ -6,7 +6,8 @@ The app's photo capture delegate object.
 */
 
 #import "AVCamPhotoCaptureDelegate.h"
-#import <CoreImage/CoreImage.h>
+@import CoreImage;
+@import CoreLocation;
 
 @import Photos;
 
@@ -68,6 +69,9 @@ The app's photo capture delegate object.
 	else if ( semanticSegmentationMatteType == AVSemanticSegmentationMatteTypeTeeth ) {
 		imageOption = kCIImageAuxiliarySemanticSegmentationTeethMatte;
 	}
+	else if ( semanticSegmentationMatteType == AVSemanticSegmentationMatteTypeGlasses ) {
+		imageOption = kCIImageAuxiliarySemanticSegmentationGlassesMatte;
+	}
 	else {
 		NSLog( @"%@ Matte type is not supported!",semanticSegmentationMatteType.description );
 		return;
@@ -115,8 +119,8 @@ The app's photo capture delegate object.
         NSLog( @"Error capturing photo: %@", error );
         return;
     }
-    
-    self.photoData = [photo fileDataRepresentation];
+	
+	self.photoData = [photo fileDataRepresentation];
     
     // Portrait Effects Matte only gets generated if there is a face
     if ( photo.portraitEffectsMatte != nil ) {
@@ -174,6 +178,9 @@ The app's photo capture delegate object.
                 PHAssetCreationRequest* creationRequest = [PHAssetCreationRequest creationRequestForAsset];
                 [creationRequest addResourceWithType:PHAssetResourceTypePhoto data:self.photoData options:options];
                 
+				// Specify the location the photo was taken
+				creationRequest.location = self.location;
+				
                 if ( self.livePhotoCompanionMovieURL ) {
                     PHAssetResourceCreationOptions* livePhotoCompanionMovieResourceOptions = [[PHAssetResourceCreationOptions alloc] init];
                     livePhotoCompanionMovieResourceOptions.shouldMoveFile = YES;

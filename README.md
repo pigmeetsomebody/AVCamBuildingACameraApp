@@ -51,17 +51,14 @@ The `changeCamera` method handles switching between cameras when the user taps a
 ``` swift
 switch currentPosition {
 case .unspecified, .front:
-    preferredPosition = .back
-    preferredDeviceType = .builtInDualCamera
+    newVideoDevice = backVideoDeviceDiscoverySession.devices.first
     
 case .back:
-    preferredPosition = .front
-    preferredDeviceType = .builtInTrueDepthCamera
+    newVideoDevice = frontVideoDeviceDiscoverySession.devices.first
     
 @unknown default:
     print("Unknown capture position. Defaulting to back, dual-camera.")
-    preferredPosition = .back
-    preferredDeviceType = .builtInDualCamera
+    newVideoDevice = AVCaptureDevice.default(.builtInDualCamera, for: .video, position: .back)
 }
 ```
 
@@ -195,8 +192,8 @@ if self.videoDeviceInput.device.isFlashAvailable {
 }
 
 photoSettings.isHighResolutionPhotoEnabled = true
-if !photoSettings.__availablePreviewPhotoPixelFormatTypes.isEmpty {
-    photoSettings.previewPhotoFormat = [kCVPixelBufferPixelFormatTypeKey as String: photoSettings.__availablePreviewPhotoPixelFormatTypes.first!]
+if let previewPhotoPixelFormatType = photoSettings.availablePreviewPhotoPixelFormatTypes.first {
+    photoSettings.previewPhotoFormat = [kCVPixelBufferPixelFormatTypeKey as String: previewPhotoPixelFormatType]
 }
 // Live Photo capture is not supported in movie mode.
 if self.livePhotoMode == .on && self.photoOutput.isLivePhotoCaptureSupported {
@@ -422,6 +419,8 @@ case .skin:
     imageOption = .auxiliarySemanticSegmentationSkinMatte
 case .teeth:
     imageOption = .auxiliarySemanticSegmentationTeethMatte
+case .glasses:
+    imageOption = .auxiliarySemanticSegmentationGlassesMatte
 default:
     print("This semantic segmentation type is not supported!")
     return
@@ -454,7 +453,7 @@ AVCam checks for authorization in the ['captureOutput:didFinishRecordingToOutput
 PHPhotoLibrary.requestAuthorization { status in
 ```
 
-For more information about requesting access to the user's photo library, see [Requesting Authorization to Access Photos][49].
+For more information about requesting access to the user's photo library, see [Delivering a Great Privacy Experience in Your Photos App][49].
 
 ## Record Movie Files
 
@@ -463,8 +462,11 @@ AVCam supports video capture by querying and adding input devices with the `.vid
 ``` swift
 if let dualCameraDevice = AVCaptureDevice.default(.builtInDualCamera, for: .video, position: .back) {
     defaultVideoDevice = dualCameraDevice
+} else if let dualWideCameraDevice = AVCaptureDevice.default(.builtInDualWideCamera, for: .video, position: .back) {
+    // If a rear dual camera is not available, default to the rear dual wide camera.
+    defaultVideoDevice = dualWideCameraDevice
 } else if let backCameraDevice = AVCaptureDevice.default(.builtInWideAngleCamera, for: .video, position: .back) {
-    // If a rear dual camera is not available, default to the rear wide angle camera.
+    // If a rear dual wide camera is not available, default to the rear wide angle camera.
     defaultVideoDevice = backCameraDevice
 } else if let frontCameraDevice = AVCaptureDevice.default(.builtInWideAngleCamera, for: .video, position: .front) {
     // If the rear wide angle camera isn't available, default to the front wide angle camera.
@@ -499,18 +501,21 @@ DispatchQueue.main.async {
 - [`fileOutput(_:didFinishRecordingTo:from:error:)`][54] fires last, indicating that the movie is fully written to disk and is ready for consumption. AVCam takes this chance to move the temporarily saved movie from the given URL to the user’s photo library or the app’s documents folder:
 
 ``` swift
-PHPhotoLibrary.shared().performChanges({
-    let options = PHAssetResourceCreationOptions()
-    options.shouldMoveFile = true
-    let creationRequest = PHAssetCreationRequest.forAsset()
-    creationRequest.addResource(with: .video, fileURL: outputFileURL, options: options)
-}, completionHandler: { success, error in
-    if !success {
-        print("AVCam couldn't save the movie to your photo library: \(String(describing: error))")
-    }
-    cleanup()
-}
-)
+              PHPhotoLibrary.shared().performChanges({
+                  let options = PHAssetResourceCreationOptions()
+                  options.shouldMoveFile = true
+                  let creationRequest = PHAssetCreationRequest.forAsset()
+                  creationRequest.addResource(with: .video, fileURL: outputFileURL, options: options)
+
+// Specify the location the movie was recoreded
+creationRequest.location = self.locationManager.location
+              }, completionHandler: { success, error in
+                  if !success {
+                      print("AVCam couldn't save the movie to your photo library: \(String(describing: error))")
+                  }
+                  cleanup()
+              }
+              )
 ```
 [View in Source][55]
 
@@ -531,6 +536,27 @@ if self.session.canAddOutput(movieFileOutput) {
     self.session.beginConfiguration()
     self.session.addOutput(movieFileOutput)
     self.session.sessionPreset = .high
+    
+    self.selectedMovieMode10BitDeviceFormat = self.tenBitVariantOfFormat(activeFormat: self.videoDeviceInput.device.activeFormat)
+    
+    if self.selectedMovieMode10BitDeviceFormat != nil {
+        DispatchQueue.main.async {
+            self.HDRVideoModeButton.isHidden = false
+            self.HDRVideoModeButton.isEnabled = true
+        }
+        
+        if self.HDRVideoMode == .on {
+            do {
+                try self.videoDeviceInput.device.lockForConfiguration()
+                self.videoDeviceInput.device.activeFormat = self.selectedMovieMode10BitDeviceFormat!
+                print("Setting 'x420' format \(String(describing: self.selectedMovieMode10BitDeviceFormat)) for video recording")
+                self.videoDeviceInput.device.unlockForConfiguration()
+            } catch {
+                print("Could not lock device for configuration: \(error)")
+            }
+        }
+    }
+    
     if let connection = movieFileOutput.connection(with: .video) {
         if connection.isVideoStabilizationSupported {
             connection.preferredVideoStabilizationMode = .auto
@@ -548,10 +574,10 @@ if self.session.canAddOutput(movieFileOutput) {
         self.recordButton.isEnabled = true
         
         /*
-         For photo captures during movie recording, Speed quality photo processing is prioritized
-         to avoid frame drops during recording.
+         For photo captures during movie recording, Balanced quality photo processing is prioritized
+         to get high quality stills and avoid frame drops during recording.
          */
-        self.photoQualityPrioritizationSegControl.selectedSegmentIndex = 0
+        self.photoQualityPrioritizationSegControl.selectedSegmentIndex = 1
         self.photoQualityPrioritizationSegControl.sendActions(for: UIControl.Event.valueChanged)
     }
 }
@@ -605,7 +631,7 @@ if self.session.canAddOutput(movieFileOutput) {
 [46]:	https://developer.apple.com/documentation/avfoundation/avcapturephoto/3153009-semanticsegmentationmatte
 [47]:	https://developer.apple.com/documentation/avfoundation/avsemanticsegmentationmatte
 [48]:	https://developer.apple.com/documentation/avfoundation/avcapturefileoutputrecordingdelegate/1390612-captureoutput
-[49]:	https://developer.apple.com/documentation/photokit/requesting_authorization_to_access_photos
+[49]:	https://developer.apple.com/documentation/photokit/delivering_a_great_privacy_experience_in_your_photos_app
 [50]:	https://developer.apple.com/documentation/avfoundation/avcapturefileoutput/1387224-startrecording
 [51]:	https://developer.apple.com/documentation/avfoundation/avcapturefileoutputrecordingdelegate
 [52]:	https://developer.apple.com/documentation/avfoundation/avcapturefileoutputrecordingdelegate/1387301-fileoutput

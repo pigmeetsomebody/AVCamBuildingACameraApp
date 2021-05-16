@@ -62,6 +62,9 @@ The view controller that presents the SSM selection interface.
 	else if ( [textLabel containsString:@"Hair"] != 0) {
 		cell.textLabel.text = @"Hair";
 	}
+	else if ( [textLabel containsString:@"Glasses"] != 0) {
+		cell.textLabel.text = @"Glasses";
+	}
 	else {
 		cell.textLabel.text = @"Not supported";
 	}

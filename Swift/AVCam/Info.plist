@@ -24,6 +24,8 @@
 	<true/>
 	<key>NSCameraUsageDescription</key>
 	<string>AVCam uses the camera to take photos and video.</string>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>AVCam uses your location to tag where photos and videos are taken.</string>
 	<key>NSMicrophoneUsageDescription</key>
 	<string>AVCam uses the microphone to record sound during Live Photos and movies.</string>
 	<key>NSPhotoLibraryUsageDescription</key>

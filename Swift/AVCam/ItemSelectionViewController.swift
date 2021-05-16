@@ -8,7 +8,7 @@ The view controller that presents the SSM selection interface.
 import UIKit
 import AVFoundation
 
-protocol ItemSelectionViewControllerDelegate: class {
+protocol ItemSelectionViewControllerDelegate: AnyObject {
     func itemSelectionViewController(_ itemSelectionViewController: ItemSelectionViewController,
                                      didFinishSelectingItems selectedItems: [AVSemanticSegmentationMatte.MatteType])
 }
@@ -74,6 +74,8 @@ class ItemSelectionViewController: UITableViewController {
             cell.textLabel?.text = "Teeth"
         case .skin:
             cell.textLabel?.text = "Skin"
+        case .glasses:
+            cell.textLabel?.text = "Glasses"
         default:
             fatalError("Unknown matte type specified.")
         }

@@ -7,6 +7,7 @@ The app's primary view controller that presents the camera interface.
 
 import UIKit
 import AVFoundation
+import CoreLocation
 import Photos
 
 class CameraViewController: UIViewController, AVCaptureFileOutputRecordingDelegate, ItemSelectionViewControllerDelegate {
@@ -16,6 +17,8 @@ class CameraViewController: UIViewController, AVCaptureFileOutputRecordingDelega
     var windowOrientation: UIInterfaceOrientation {
         return view.window?.windowScene?.interfaceOrientation ?? .unknown
     }
+	
+	let locationManager = CLLocationManager()
 
     // MARK: View Controller Life Cycle
     
@@ -32,9 +35,16 @@ class CameraViewController: UIViewController, AVCaptureFileOutputRecordingDelega
         semanticSegmentationMatteDeliveryButton.isEnabled = false
         photoQualityPrioritizationSegControl.isEnabled = false
         captureModeControl.isEnabled = false
+        HDRVideoModeButton.isHidden = true
         
         // Set up the video preview view.
         previewView.session = session
+		
+		// Request location authorization so photos and videos can be tagged with their location.
+		if locationManager.authorizationStatus == .notDetermined {
+			locationManager.requestWhenInUseAuthorization()
+		}
+		
         /*
          Check the video authorization status. Video access is required and audio
          access is optional. If the user denies audio access, AVCam won't
@@ -217,8 +227,11 @@ class CameraViewController: UIViewController, AVCaptureFileOutputRecordingDelega
             
             if let dualCameraDevice = AVCaptureDevice.default(.builtInDualCamera, for: .video, position: .back) {
                 defaultVideoDevice = dualCameraDevice
+            } else if let dualWideCameraDevice = AVCaptureDevice.default(.builtInDualWideCamera, for: .video, position: .back) {
+                // If a rear dual camera is not available, default to the rear dual wide camera.
+                defaultVideoDevice = dualWideCameraDevice
             } else if let backCameraDevice = AVCaptureDevice.default(.builtInWideAngleCamera, for: .video, position: .back) {
-                // If a rear dual camera is not available, default to the rear wide angle camera.
+                // If a rear dual wide camera is not available, default to the rear wide angle camera.
                 defaultVideoDevice = backCameraDevice
             } else if let frontCameraDevice = AVCaptureDevice.default(.builtInWideAngleCamera, for: .video, position: .front) {
                 // If the rear wide angle camera isn't available, default to the front wide angle camera.
@@ -348,6 +361,8 @@ class CameraViewController: UIViewController, AVCaptureFileOutputRecordingDelega
         
         if captureModeControl.selectedSegmentIndex == CaptureMode.photo.rawValue {
             recordButton.isEnabled = false
+            HDRVideoModeButton.isHidden = true
+            selectedMovieMode10BitDeviceFormat = nil
             
             sessionQueue.async {
                 // Remove the AVCaptureMovieFileOutput from the session because it doesn't support capture of Live Photos.
@@ -417,6 +432,27 @@ class CameraViewController: UIViewController, AVCaptureFileOutputRecordingDelega
                     self.session.beginConfiguration()
                     self.session.addOutput(movieFileOutput)
                     self.session.sessionPreset = .high
+                    
+                    self.selectedMovieMode10BitDeviceFormat = self.tenBitVariantOfFormat(activeFormat: self.videoDeviceInput.device.activeFormat)
+                    
+                    if self.selectedMovieMode10BitDeviceFormat != nil {
+                        DispatchQueue.main.async {
+                            self.HDRVideoModeButton.isHidden = false
+                            self.HDRVideoModeButton.isEnabled = true
+                        }
+                        
+                        if self.HDRVideoMode == .on {
+                            do {
+                                try self.videoDeviceInput.device.lockForConfiguration()
+                                self.videoDeviceInput.device.activeFormat = self.selectedMovieMode10BitDeviceFormat!
+                                print("Setting 'x420' format \(String(describing: self.selectedMovieMode10BitDeviceFormat)) for video recording")
+                                self.videoDeviceInput.device.unlockForConfiguration()
+                            } catch {
+                                print("Could not lock device for configuration: \(error)")
+                            }
+                        }
+                    }
+                    
                     if let connection = movieFileOutput.connection(with: .video) {
                         if connection.isVideoStabilizationSupported {
                             connection.preferredVideoStabilizationMode = .auto
@@ -434,10 +470,10 @@ class CameraViewController: UIViewController, AVCaptureFileOutputRecordingDelega
                         self.recordButton.isEnabled = true
                         
                         /*
-                         For photo captures during movie recording, Speed quality photo processing is prioritized
-                         to avoid frame drops during recording.
+                         For photo captures during movie recording, Balanced quality photo processing is prioritized
+                         to get high quality stills and avoid frame drops during recording.
                          */
-                        self.photoQualityPrioritizationSegControl.selectedSegmentIndex = 0
+                        self.photoQualityPrioritizationSegControl.selectedSegmentIndex = 1
                         self.photoQualityPrioritizationSegControl.sendActions(for: UIControl.Event.valueChanged)
                     }
                 }
@@ -451,9 +487,9 @@ class CameraViewController: UIViewController, AVCaptureFileOutputRecordingDelega
     
     @IBOutlet private weak var cameraUnavailableLabel: UILabel!
     
-    private let videoDeviceDiscoverySession = AVCaptureDevice.DiscoverySession(deviceTypes: [.builtInWideAngleCamera, .builtInDualCamera, .builtInTrueDepthCamera],
+    private let videoDeviceDiscoverySession = AVCaptureDevice.DiscoverySession(deviceTypes: [.builtInWideAngleCamera, .builtInDualCamera, .builtInTrueDepthCamera, .builtInDualWideCamera],
                                                                                mediaType: .video, position: .unspecified)
-    
+
     /// - Tag: ChangeCamera
     @IBAction private func changeCamera(_ cameraButton: UIButton) {
         cameraButton.isEnabled = false
@@ -465,36 +501,29 @@ class CameraViewController: UIViewController, AVCaptureFileOutputRecordingDelega
         portraitEffectsMatteDeliveryButton.isEnabled = false
         semanticSegmentationMatteDeliveryButton.isEnabled = false
         photoQualityPrioritizationSegControl.isEnabled = false
+        HDRVideoModeButton.isEnabled = false
+        self.selectedMovieMode10BitDeviceFormat = nil
         
         sessionQueue.async {
             let currentVideoDevice = self.videoDeviceInput.device
             let currentPosition = currentVideoDevice.position
-            
-            let preferredPosition: AVCaptureDevice.Position
-            let preferredDeviceType: AVCaptureDevice.DeviceType
+
+            let backVideoDeviceDiscoverySession = AVCaptureDevice.DiscoverySession(deviceTypes: [.builtInDualCamera, .builtInDualWideCamera, .builtInWideAngleCamera],
+                                                                                   mediaType: .video, position: .back)
+            let frontVideoDeviceDiscoverySession = AVCaptureDevice.DiscoverySession(deviceTypes: [.builtInTrueDepthCamera, .builtInWideAngleCamera],
+                                                                                    mediaType: .video, position: .front)
+            var newVideoDevice: AVCaptureDevice? = nil
             
             switch currentPosition {
             case .unspecified, .front:
-                preferredPosition = .back
-                preferredDeviceType = .builtInDualCamera
+                newVideoDevice = backVideoDeviceDiscoverySession.devices.first
                 
             case .back:
-                preferredPosition = .front
-                preferredDeviceType = .builtInTrueDepthCamera
+                newVideoDevice = frontVideoDeviceDiscoverySession.devices.first
                 
             @unknown default:
                 print("Unknown capture position. Defaulting to back, dual-camera.")
-                preferredPosition = .back
-                preferredDeviceType = .builtInDualCamera
-            }
-            let devices = self.videoDeviceDiscoverySession.devices
-            var newVideoDevice: AVCaptureDevice? = nil
-            
-            // First, seek a device with both the preferred position and device type. Otherwise, seek a device with only the preferred position.
-            if let device = devices.first(where: { $0.position == preferredPosition && $0.deviceType == preferredDeviceType }) {
-                newVideoDevice = device
-            } else if let device = devices.first(where: { $0.position == preferredPosition }) {
-                newVideoDevice = device
+                newVideoDevice = AVCaptureDevice.default(.builtInDualCamera, for: .video, position: .back)
             }
             
             if let videoDevice = newVideoDevice {
@@ -517,6 +546,27 @@ class CameraViewController: UIViewController, AVCaptureFileOutputRecordingDelega
                         self.session.addInput(self.videoDeviceInput)
                     }
                     if let connection = self.movieFileOutput?.connection(with: .video) {
+                        self.session.sessionPreset = .high
+                        
+                        self.selectedMovieMode10BitDeviceFormat = self.tenBitVariantOfFormat(activeFormat: self.videoDeviceInput.device.activeFormat)
+                        
+                        if self.selectedMovieMode10BitDeviceFormat != nil {
+                            DispatchQueue.main.async {
+                                self.HDRVideoModeButton.isEnabled = true
+                            }
+                            
+                            if self.HDRVideoMode == .on {
+                                do {
+                                    try self.videoDeviceInput.device.lockForConfiguration()
+                                    self.videoDeviceInput.device.activeFormat = self.selectedMovieMode10BitDeviceFormat!
+                                    print("Setting 'x420' format \(String(describing: self.selectedMovieMode10BitDeviceFormat)) for video recording")
+                                    self.videoDeviceInput.device.unlockForConfiguration()
+                                } catch {
+                                    print("Could not lock device for configuration: \(error)")
+                                }
+                            }
+                        }
+                        
                         if connection.isVideoStabilizationSupported {
                             connection.preferredVideoStabilizationMode = .auto
                         }
@@ -625,8 +675,8 @@ class CameraViewController: UIViewController, AVCaptureFileOutputRecordingDelega
             }
             
             photoSettings.isHighResolutionPhotoEnabled = true
-            if !photoSettings.__availablePreviewPhotoPixelFormatTypes.isEmpty {
-                photoSettings.previewPhotoFormat = [kCVPixelBufferPixelFormatTypeKey as String: photoSettings.__availablePreviewPhotoPixelFormatTypes.first!]
+            if let previewPhotoPixelFormatType = photoSettings.availablePreviewPhotoPixelFormatTypes.first {
+                photoSettings.previewPhotoFormat = [kCVPixelBufferPixelFormatTypeKey as String: previewPhotoPixelFormatType]
             }
             // Live Photo capture is not supported in movie mode.
             if self.livePhotoMode == .on && self.photoOutput.isLivePhotoCaptureSupported {
@@ -694,6 +744,9 @@ class CameraViewController: UIViewController, AVCaptureFileOutputRecordingDelega
                 }
             }
             )
+			
+			// Specify the location the photo was taken
+			photoCaptureProcessor.location = self.locationManager.location
             
             // The photo output holds a weak reference to the photo capture delegate and stores it in an array to maintain a strong reference.
             self.inProgressPhotoCaptureDelegates[photoCaptureProcessor.requestedPhotoSettings.uniqueID] = photoCaptureProcessor
@@ -840,6 +893,79 @@ class CameraViewController: UIViewController, AVCaptureFileOutputRecordingDelega
             }
         }
     }
+
+    func tenBitVariantOfFormat(activeFormat: AVCaptureDevice.Format) -> AVCaptureDevice.Format? {
+        let formats = self.videoDeviceInput.device.formats
+        let formatIndex = formats.firstIndex(of: activeFormat)!
+        
+        let activeDimensions = CMVideoFormatDescriptionGetDimensions(activeFormat.formatDescription)
+        let activeMaxFrameRate = activeFormat.videoSupportedFrameRateRanges.last?.maxFrameRate
+        let activePixelFormat = CMFormatDescriptionGetMediaSubType(activeFormat.formatDescription)
+        
+        /*
+         AVCaptureDeviceFormats are sorted from smallest to largest in resolution and frame rate.
+         For each resolution and max frame rate there's a cluster of formats that only differ in pixelFormatType.
+         Here, we're looking for an 'x420' variant of the current activeFormat.
+        */
+        if activePixelFormat != kCVPixelFormatType_420YpCbCr10BiPlanarVideoRange {
+            // Current activeFormat is not a 10-bit HDR format, find its 10-bit HDR variant.
+            for index in formatIndex + 1..<formats.count {
+                let format = formats[index]
+                let dimensions = CMVideoFormatDescriptionGetDimensions(format.formatDescription)
+                let maxFrameRate = format.videoSupportedFrameRateRanges.last?.maxFrameRate
+                let pixelFormat = CMFormatDescriptionGetMediaSubType(format.formatDescription)
+                
+                // Don't advance beyond the current format cluster
+                if activeMaxFrameRate != maxFrameRate || activeDimensions.width != dimensions.width || activeDimensions.height != dimensions.height {
+                    break
+                }
+                
+                if pixelFormat == kCVPixelFormatType_420YpCbCr10BiPlanarVideoRange {
+                    return format
+                }
+            }
+        } else {
+            return activeFormat
+        }
+        
+        return nil
+    }
+
+    private var selectedMovieMode10BitDeviceFormat: AVCaptureDevice.Format?
+    
+    private enum HDRVideoMode {
+        case on
+        case off
+    }
+
+    private var HDRVideoMode: HDRVideoMode = .on
+    
+    @IBOutlet private weak var HDRVideoModeButton: UIButton!
+    
+    @IBAction private func toggleHDRVideoMode(_ HDRVideoModeButton: UIButton) {
+        sessionQueue.async {
+            self.HDRVideoMode = (self.HDRVideoMode == .on) ? .off : .on
+            let HDRVideoMode = self.HDRVideoMode
+            
+            DispatchQueue.main.async {
+                if HDRVideoMode == .on {
+                    do {
+                        try self.videoDeviceInput.device.lockForConfiguration()
+                        self.videoDeviceInput.device.activeFormat = self.selectedMovieMode10BitDeviceFormat!
+                        self.videoDeviceInput.device.unlockForConfiguration()
+                    } catch {
+                        print("Could not lock device for configuration: \(error)")
+                    }
+                    self.HDRVideoModeButton.setTitle("HDR On", for: .normal)
+                } else {
+                    self.session.beginConfiguration()
+                    self.session.sessionPreset = .high
+                    self.session.commitConfiguration()
+                    self.HDRVideoModeButton.setTitle("HDR Off", for: .normal)
+                }
+            }
+        }
+    }
     
     private var inProgressLivePhotoCapturesCount = 0
     
@@ -949,6 +1075,9 @@ class CameraViewController: UIViewController, AVCaptureFileOutputRecordingDelega
                         options.shouldMoveFile = true
                         let creationRequest = PHAssetCreationRequest.forAsset()
                         creationRequest.addResource(with: .video, fileURL: outputFileURL, options: options)
+						
+						// Specify the location the movie was recoreded
+						creationRequest.location = self.locationManager.location
                     }, completionHandler: { success, error in
                         if !success {
                             print("AVCam couldn't save the movie to your photo library: \(String(describing: error))")

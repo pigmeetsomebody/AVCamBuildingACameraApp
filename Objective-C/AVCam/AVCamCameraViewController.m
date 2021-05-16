@@ -6,6 +6,7 @@ The app's primary view controller that presents the camera interface.
 */
 
 @import AVFoundation;
+@import CoreLocation;
 @import Photos;
 
 #import "AVCamCameraViewController.h"
@@ -42,6 +43,10 @@ typedef NS_ENUM(NSInteger, AVCamPortraitEffectsMatteDeliveryMode) {
     AVCamPortraitEffectsMatteDeliveryModeOff
 };
 
+typedef NS_ENUM(NSInteger, AVCamHDRVideoMode) {
+    AVCamHDRVideoModeOn,
+    AVCamHDRVideoModeOff
+};
 
 @interface AVCaptureDeviceDiscoverySession (Utilities)
 
@@ -95,11 +100,15 @@ typedef NS_ENUM(NSInteger, AVCamPortraitEffectsMatteDeliveryMode) {
 @property (nonatomic, weak) IBOutlet UISegmentedControl *photoQualityPrioritizationSegControl;
 @property (nonatomic) AVCapturePhotoQualityPrioritization photoQualityPrioritizationMode;
 @property (weak, nonatomic) IBOutlet UIButton *semanticSegmentationMatteDeliveryButton;
+@property (nonatomic, weak) IBOutlet UIButton* HDRVideoModeButton;
+@property (nonatomic) AVCamHDRVideoMode HDRVideoMode;
 
 @property (nonatomic) AVCapturePhotoOutput* photoOutput;
 @property (nonatomic) NSArray<AVSemanticSegmentationMatteType>* selectedSemanticSegmentationMatteTypes;
 @property (nonatomic) NSMutableDictionary<NSNumber* , AVCamPhotoCaptureDelegate* >* inProgressPhotoCaptureDelegates;
 @property (nonatomic) NSInteger inProgressLivePhotoCapturesCount;
+
+@property (nonatomic) CLLocationManager *locationManager;
 
 // Recording movies.
 @property (nonatomic, weak) IBOutlet UIButton* recordButton;
@@ -107,6 +116,8 @@ typedef NS_ENUM(NSInteger, AVCamPortraitEffectsMatteDeliveryMode) {
 
 @property (nonatomic, strong) AVCaptureMovieFileOutput* movieFileOutput;
 @property (nonatomic) UIBackgroundTaskIdentifier backgroundRecordingID;
+@property (nonatomic) AVCaptureDeviceFormat *selectedMovieMode10BitDeviceFormat;
+
 
 @property (nonatomic, retain) UIActivityIndicatorView *spinner;
 @end
@@ -129,12 +140,13 @@ typedef NS_ENUM(NSInteger, AVCamPortraitEffectsMatteDeliveryMode) {
     self.portraitEffectsMatteDeliveryButton.enabled = NO;
 	self.semanticSegmentationMatteDeliveryButton.enabled = NO;
     self.photoQualityPrioritizationSegControl.enabled = NO;
+    self.HDRVideoModeButton.hidden = YES;
     
     // Create the AVCaptureSession.
     self.session = [[AVCaptureSession alloc] init];
     
     // Create a device discovery session.
-    NSArray<AVCaptureDeviceType>* deviceTypes = @[AVCaptureDeviceTypeBuiltInWideAngleCamera, AVCaptureDeviceTypeBuiltInDualCamera, AVCaptureDeviceTypeBuiltInTrueDepthCamera];
+    NSArray<AVCaptureDeviceType>* deviceTypes = @[AVCaptureDeviceTypeBuiltInWideAngleCamera, AVCaptureDeviceTypeBuiltInDualCamera, AVCaptureDeviceTypeBuiltInTrueDepthCamera, AVCaptureDeviceTypeBuiltInDualWideCamera];
     self.videoDeviceDiscoverySession = [AVCaptureDeviceDiscoverySession discoverySessionWithDeviceTypes:deviceTypes mediaType:AVMediaTypeVideo position:AVCaptureDevicePositionUnspecified];
     
     // Set up the preview view.
@@ -144,6 +156,12 @@ typedef NS_ENUM(NSInteger, AVCamPortraitEffectsMatteDeliveryMode) {
     self.sessionQueue = dispatch_queue_create("session queue", DISPATCH_QUEUE_SERIAL);
     
     self.setupResult = AVCamSetupResultSuccess;
+    
+    // Request location authorization so photos and videos can be tagged with their location.
+    self.locationManager = [[CLLocationManager alloc] init];
+    if (self.locationManager.authorizationStatus == kCLAuthorizationStatusNotDetermined) {
+        [self.locationManager requestWhenInUseAuthorization];
+    }
     
     /*
      Check video authorization status. Video access is required and audio
@@ -313,13 +331,16 @@ typedef NS_ENUM(NSInteger, AVCamPortraitEffectsMatteDeliveryMode) {
     // Choose the back dual camera if available, otherwise default to a wide angle camera.
     AVCaptureDevice* videoDevice = [AVCaptureDevice defaultDeviceWithDeviceType:AVCaptureDeviceTypeBuiltInDualCamera mediaType:AVMediaTypeVideo position:AVCaptureDevicePositionBack];
     if (!videoDevice) {
-        // If a rear dual camera is not available, default to the rear wide angle camera.
+        // If a rear dual camera is not available, default to the rear dual wide angle camera.
+        videoDevice = [AVCaptureDevice defaultDeviceWithDeviceType:AVCaptureDeviceTypeBuiltInDualWideCamera mediaType:AVMediaTypeVideo position:AVCaptureDevicePositionBack];
+    }
+    if (!videoDevice) {
+        // If a rear dual wide camera is not available, default to the rear wide angle camera.
         videoDevice = [AVCaptureDevice defaultDeviceWithDeviceType:AVCaptureDeviceTypeBuiltInWideAngleCamera mediaType:AVMediaTypeVideo position:AVCaptureDevicePositionBack];
-        
-        // In the event that the rear wide angle camera isn't available, default to the front wide angle camera.
-        if (!videoDevice) {
-            videoDevice = [AVCaptureDevice defaultDeviceWithDeviceType:AVCaptureDeviceTypeBuiltInWideAngleCamera mediaType:AVMediaTypeVideo position:AVCaptureDevicePositionFront];
-        }
+    }
+    if (!videoDevice) {
+        // If a rear wide angle camera is not available, default to the front wide angle camera.
+        videoDevice = [AVCaptureDevice defaultDeviceWithDeviceType:AVCaptureDeviceTypeBuiltInWideAngleCamera mediaType:AVMediaTypeVideo position:AVCaptureDevicePositionFront];
     }
     AVCaptureDeviceInput* videoDeviceInput = [AVCaptureDeviceInput deviceInputWithDevice:videoDevice error:&error];
     if (!videoDeviceInput) {
@@ -400,6 +421,7 @@ typedef NS_ENUM(NSInteger, AVCamPortraitEffectsMatteDeliveryMode) {
     }
     
     self.backgroundRecordingID = UIBackgroundTaskInvalid;
+    self.selectedMovieMode10BitDeviceFormat = nil;
     
     [self.session commitConfiguration];
 }
@@ -433,10 +455,52 @@ typedef NS_ENUM(NSInteger, AVCamPortraitEffectsMatteDeliveryMode) {
     });
 }
 
+- (AVCaptureDeviceFormat *) tenBitVariantOfFormat:(AVCaptureDeviceFormat *)activeFormat
+{
+    NSArray<AVCaptureDeviceFormat *> *formats = self.videoDeviceInput.device.formats;
+    NSUInteger formatIndex = [formats indexOfObject:activeFormat];
+    
+    CMVideoDimensions activeDimensions = CMVideoFormatDescriptionGetDimensions(activeFormat.formatDescription);
+    Float64 activeMaxFrameRate = activeFormat.videoSupportedFrameRateRanges.lastObject.maxFrameRate;
+    FourCharCode activePixelFormat = CMFormatDescriptionGetMediaSubType(activeFormat.formatDescription);
+    
+    /*
+     AVCaptureDeviceFormats are sorted from smallest to largest in resolution and frame rate.
+     For each resolution and max frame rate there's a cluster of formats that only differ in pixelFormatType.
+     Here, we're looking for an 'x420' variant of the current activeFormat.
+    */
+    if (activePixelFormat != kCVPixelFormatType_420YpCbCr10BiPlanarVideoRange) {
+        // Current activeFormat is not a 10-bit HDR format, find its 10-bit HDR variant.
+        for (NSUInteger index = formatIndex + 1; index < formats.count; index++) {
+            AVCaptureDeviceFormat *format = formats[index];
+            CMVideoDimensions dimensions = CMVideoFormatDescriptionGetDimensions(format.formatDescription);
+            Float64 maxFrameRate = format.videoSupportedFrameRateRanges.lastObject.maxFrameRate;
+            FourCharCode pixelFormat = CMFormatDescriptionGetMediaSubType(format.formatDescription);
+            
+            // Don't advance beyond the current format cluster
+            if (activeMaxFrameRate != maxFrameRate || activeDimensions.width != dimensions.width || activeDimensions.height != dimensions.height) {
+                break;
+            }
+            
+            if (pixelFormat == kCVPixelFormatType_420YpCbCr10BiPlanarVideoRange) {
+                return format;
+            }
+        }
+    }
+    else
+    {
+        return activeFormat;
+    }
+    
+    return nil;
+}
+    
 - (IBAction) toggleCaptureMode:(UISegmentedControl*)captureModeControl
 {
     if (captureModeControl.selectedSegmentIndex == AVCamCaptureModePhoto) {
         self.recordButton.enabled = NO;
+        self.HDRVideoModeButton.hidden = YES;
+        self.selectedMovieMode10BitDeviceFormat = nil;
         
         dispatch_async(self.sessionQueue, ^{
             /*
@@ -509,6 +573,28 @@ typedef NS_ENUM(NSInteger, AVCamPortraitEffectsMatteDeliveryMode) {
                 [self.session beginConfiguration];
                 [self.session addOutput:movieFileOutput];
                 self.session.sessionPreset = AVCaptureSessionPresetHigh;
+                
+                self.selectedMovieMode10BitDeviceFormat = [self tenBitVariantOfFormat:self.videoDeviceInput.device.activeFormat];
+
+                if (self.selectedMovieMode10BitDeviceFormat) {
+                    dispatch_async(dispatch_get_main_queue(), ^{
+                        self.HDRVideoModeButton.hidden = NO;
+                        self.HDRVideoModeButton.enabled = YES;
+                    });
+                    
+                    if (self.HDRVideoMode == AVCamHDRVideoModeOn) {
+                        NSError* error = nil;
+                        if ([self.videoDeviceInput.device lockForConfiguration:&error]) {
+                            self.videoDeviceInput.device.activeFormat = self.selectedMovieMode10BitDeviceFormat;
+                            NSLog(@"Setting 'x420' format (%@) for video recording.", self.selectedMovieMode10BitDeviceFormat);
+                            [self.videoDeviceInput.device unlockForConfiguration];
+                        }
+                        else {
+                            NSLog(@"Could not lock device for configuration: %@", error);
+                        }
+                    }
+                }
+                
                 AVCaptureConnection* connection = [movieFileOutput connectionWithMediaType:AVMediaTypeVideo];
                 if (connection.isVideoStabilizationSupported) {
                     connection.preferredVideoStabilizationMode = AVCaptureVideoStabilizationModeAuto;
@@ -521,10 +607,10 @@ typedef NS_ENUM(NSInteger, AVCamPortraitEffectsMatteDeliveryMode) {
                     self.recordButton.enabled = YES;
                     
                     /*
-                     For photo captures during movie recording, Speed quality photo processing is prioritized
-                     to avoid frame drops during recording.
+                     For photo captures during movie recording, Balanced quality photo processing is prioritized
+                     to get high quality stills and avoid frame drops during recording.
                      */
-                    self.photoQualityPrioritizationSegControl.selectedSegmentIndex = 0;
+                    self.photoQualityPrioritizationSegControl.selectedSegmentIndex = 1;
                     [self.photoQualityPrioritizationSegControl sendActionsForControlEvents:UIControlEventValueChanged];
                 });
             }
@@ -545,48 +631,31 @@ typedef NS_ENUM(NSInteger, AVCamPortraitEffectsMatteDeliveryMode) {
     self.portraitEffectsMatteDeliveryButton.enabled = NO;
     self.semanticSegmentationMatteDeliveryButton.enabled = NO;
     self.photoQualityPrioritizationSegControl.enabled = NO;
+    self.HDRVideoModeButton.enabled = NO;
+    self.selectedMovieMode10BitDeviceFormat = nil;
     
     dispatch_async(self.sessionQueue, ^{
         AVCaptureDevice* currentVideoDevice = self.videoDeviceInput.device;
         AVCaptureDevicePosition currentPosition = currentVideoDevice.position;
         
-        AVCaptureDevicePosition preferredPosition;
-        AVCaptureDeviceType preferredDeviceType;
+        AVCaptureDeviceDiscoverySession *backVideoDeviceDiscoverySession = [AVCaptureDeviceDiscoverySession discoverySessionWithDeviceTypes:@[AVCaptureDeviceTypeBuiltInDualCamera, AVCaptureDeviceTypeBuiltInDualWideCamera, AVCaptureDeviceTypeBuiltInWideAngleCamera] mediaType:AVMediaTypeVideo position:AVCaptureDevicePositionBack];
+        AVCaptureDeviceDiscoverySession *frontVideoDeviceDiscoverySession = [AVCaptureDeviceDiscoverySession discoverySessionWithDeviceTypes:@[AVCaptureDeviceTypeBuiltInTrueDepthCamera, AVCaptureDeviceTypeBuiltInDualWideCamera] mediaType:AVMediaTypeVideo position:AVCaptureDevicePositionFront];
         
+        AVCaptureDevice *newVideoDevice = nil;
         switch (currentPosition)
         {
             case AVCaptureDevicePositionUnspecified:
             case AVCaptureDevicePositionFront:
-                preferredPosition = AVCaptureDevicePositionBack;
-                preferredDeviceType = AVCaptureDeviceTypeBuiltInDualCamera;
+                newVideoDevice = backVideoDeviceDiscoverySession.devices.firstObject;
                 break;
             case AVCaptureDevicePositionBack:
-                preferredPosition = AVCaptureDevicePositionFront;
-                preferredDeviceType = AVCaptureDeviceTypeBuiltInTrueDepthCamera;
+                newVideoDevice = frontVideoDeviceDiscoverySession.devices.firstObject;
                 break;
+            default:
+                NSLog(@"Unknown capture position. Defaulting to back, dual-camera.");
+                newVideoDevice = [AVCaptureDevice defaultDeviceWithDeviceType:AVCaptureDeviceTypeBuiltInDualCamera mediaType:AVMediaTypeVideo position:AVCaptureDevicePositionBack];
         }
-        
-        NSArray<AVCaptureDevice* >* devices = self.videoDeviceDiscoverySession.devices;
-        AVCaptureDevice* newVideoDevice = nil;
-        
-        // First, look for a device with both the preferred position and device type.
-        for (AVCaptureDevice* device in devices) {
-            if (device.position == preferredPosition && [device.deviceType isEqualToString:preferredDeviceType]) {
-                newVideoDevice = device;
-                break;
-            }
-        }
-        
-        // Otherwise, look for a device with only the preferred position.
-        if (!newVideoDevice) {
-            for (AVCaptureDevice* device in devices) {
-                if (device.position == preferredPosition) {
-                    newVideoDevice = device;
-                    break;
-                }
-            }
-        }
-        
+
         if (newVideoDevice) {
             AVCaptureDeviceInput* videoDeviceInput = [AVCaptureDeviceInput deviceInputWithDevice:newVideoDevice error:NULL];
             
@@ -607,9 +676,33 @@ typedef NS_ENUM(NSInteger, AVCamPortraitEffectsMatteDeliveryMode) {
                 [self.session addInput:self.videoDeviceInput];
             }
             
+            // If mode is AVCamCaptureModeMovie
             AVCaptureConnection* movieFileOutputConnection = [self.movieFileOutput connectionWithMediaType:AVMediaTypeVideo];
-            if (movieFileOutputConnection.isVideoStabilizationSupported) {
-                movieFileOutputConnection.preferredVideoStabilizationMode = AVCaptureVideoStabilizationModeAuto;
+            if (movieFileOutputConnection) {
+                self.session.sessionPreset = AVCaptureSessionPresetHigh;
+                self.selectedMovieMode10BitDeviceFormat = [self tenBitVariantOfFormat:self.videoDeviceInput.device.activeFormat];
+
+                if (self.selectedMovieMode10BitDeviceFormat) {
+                    dispatch_async(dispatch_get_main_queue(), ^{
+                        self.HDRVideoModeButton.enabled = YES;
+                    });
+                    
+                    if (self.HDRVideoMode == AVCamHDRVideoModeOn) {
+                        NSError* error = nil;
+                        if ([self.videoDeviceInput.device lockForConfiguration:&error]) {
+                            self.videoDeviceInput.device.activeFormat = self.selectedMovieMode10BitDeviceFormat;
+                            NSLog(@"Setting 'x420' format (%@) for video recording.", self.selectedMovieMode10BitDeviceFormat);
+                            [self.videoDeviceInput.device unlockForConfiguration];
+                        }
+                        else {
+                            NSLog(@"Could not lock device for configuration: %@", error);
+                        }
+                    }
+                }
+                
+                if (movieFileOutputConnection.isVideoStabilizationSupported) {
+                    movieFileOutputConnection.preferredVideoStabilizationMode = AVCaptureVideoStabilizationModeAuto;
+                }
             }
             
             /*
@@ -723,7 +816,7 @@ monitorSubjectAreaChange:(BOOL)monitorSubjectAreaChange
         
         photoSettings.portraitEffectsMatteDeliveryEnabled = (self.portraitEffectsMatteDeliveryMode == AVCamPortraitEffectsMatteDeliveryModeOn && self.photoOutput.isPortraitEffectsMatteDeliveryEnabled);
 		
-		if ( photoSettings.depthDataDeliveryEnabled && self.photoOutput.availableSemanticSegmentationMatteTypes.count > 0 ) {
+		if (photoSettings.depthDataDeliveryEnabled && self.photoOutput.availableSemanticSegmentationMatteTypes.count > 0) {
             photoSettings.enabledSemanticSegmentationMatteTypes = self.selectedSemanticSegmentationMatteTypes;
 		}
 		
@@ -772,7 +865,7 @@ monitorSubjectAreaChange:(BOOL)monitorSubjectAreaChange
         } photoProcessingHandler:^(BOOL animate) {
             // Animates a spinner while photo is processing
             dispatch_async(dispatch_get_main_queue(), ^{
-                if ( animate ) {
+                if (animate) {
                     self.spinner.hidesWhenStopped = YES;
                     self.spinner.center = CGPointMake(self.previewView.frame.size.width / 2.0, self.previewView.frame.size.height / 2.0);
                     [self.spinner startAnimating];
@@ -782,6 +875,9 @@ monitorSubjectAreaChange:(BOOL)monitorSubjectAreaChange
                 }
             });
         }];
+        
+        // Specify the location the photo was taken
+        photoCaptureDelegate.location = self.locationManager.location;
         
         /*
          The Photo Output keeps a weak reference to the photo capture delegate so
@@ -885,6 +981,35 @@ monitorSubjectAreaChange:(BOOL)monitorSubjectAreaChange
 	ItemSelectionViewController *itemSelectionViewController = [[ItemSelectionViewController alloc]initWithDelegate:self identifier:nil allItems:self.photoOutput.availableSemanticSegmentationMatteTypes selectedItems:self.selectedSemanticSegmentationMatteTypes allowMultipleSelection:YES];
 	
 	[self presentItemSelectionViewController:itemSelectionViewController];
+}
+
+- (IBAction) toggleHDRVideoMode:(UIButton*)HDRVideoModeButton
+{
+    dispatch_async(self.sessionQueue, ^{
+        self.HDRVideoMode = (self.HDRVideoMode == AVCamHDRVideoModeOn) ? AVCamHDRVideoModeOff : AVCamHDRVideoModeOn;
+        AVCamHDRVideoMode HDRVideoMode = self.HDRVideoMode;
+        
+        dispatch_async(dispatch_get_main_queue(), ^{
+            if (HDRVideoMode == AVCamHDRVideoModeOn) {
+                NSError* error = nil;
+                if ([self.videoDeviceInput.device lockForConfiguration:&error]) {
+                    self.videoDeviceInput.device.activeFormat = self.selectedMovieMode10BitDeviceFormat;
+                    [self.videoDeviceInput.device unlockForConfiguration];
+                }
+                else {
+                    NSLog(@"Could not lock device for configuration: %@", error);
+                }
+                [self.HDRVideoModeButton setTitle:@"HDR On" forState:UIControlStateNormal];
+            }
+            else
+            {
+                [self.session beginConfiguration];
+                self.session.sessionPreset = AVCaptureSessionPresetHigh;
+                [self.session commitConfiguration];
+                [self.HDRVideoModeButton setTitle:@"HDR Off" forState:UIControlStateNormal];
+            }
+        });
+    });
 }
 
 - (void) presentItemSelectionViewController:(ItemSelectionViewController *) it
@@ -1014,6 +1139,9 @@ didFinishRecordingToOutputFileAtURL:(NSURL*)outputFileURL
                     options.shouldMoveFile = YES;
                     PHAssetCreationRequest* creationRequest = [PHAssetCreationRequest creationRequestForAsset];
                     [creationRequest addResourceWithType:PHAssetResourceTypeVideo fileURL:outputFileURL options:options];
+                    
+                    // Specify the location the movie was recorded
+                    creationRequest.location = self.locationManager.location;
                 } completionHandler:^(BOOL success, NSError* error) {
                     if (!success) {
                         NSLog(@"AVCam couldn't save the movie to your photo library: %@", error);

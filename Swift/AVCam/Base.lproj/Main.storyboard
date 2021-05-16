@@ -1,10 +1,8 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<document type="com.apple.InterfaceBuilder3.CocoaTouch.Storyboard.XIB" version="3.0" toolsVersion="14750" targetRuntime="iOS.CocoaTouch" propertyAccessControl="none" useAutolayout="YES" useTraitCollections="YES" useSafeAreas="YES" colorMatched="YES" initialViewController="BYZ-38-t0r">
-    <device id="retina5_9" orientation="landscape">
-        <adaptation id="fullscreen"/>
-    </device>
+<document type="com.apple.InterfaceBuilder3.CocoaTouch.Storyboard.XIB" version="3.0" toolsVersion="19104" targetRuntime="iOS.CocoaTouch" propertyAccessControl="none" useAutolayout="YES" useTraitCollections="YES" useSafeAreas="YES" colorMatched="YES" initialViewController="BYZ-38-t0r">
+    <device id="retina5_9" orientation="portrait" appearance="light"/>
     <dependencies>
-        <plugIn identifier="com.apple.InterfaceBuilder.IBCocoaTouchPlugin" version="14710.2"/>
+        <plugIn identifier="com.apple.InterfaceBuilder.IBCocoaTouchPlugin" version="19097"/>
         <capability name="Safe area layout guides" minToolsVersion="9.0"/>
         <capability name="documents saved in the Xcode 8 format" minToolsVersion="8.0"/>
     </dependencies>
@@ -14,11 +12,11 @@
             <objects>
                 <viewController id="BYZ-38-t0r" userLabel="Camera View Controller" customClass="CameraViewController" customModule="AVCam" customModuleProvider="target" sceneMemberID="viewController">
                     <view key="view" contentMode="scaleToFill" id="8bC-Xf-vdC">
-                        <rect key="frame" x="0.0" y="0.0" width="812" height="375"/>
+                        <rect key="frame" x="0.0" y="0.0" width="375" height="812"/>
                         <autoresizingMask key="autoresizingMask" widthSizable="YES" heightSizable="YES"/>
                         <subviews>
                             <view contentMode="scaleToFill" translatesAutoresizingMaskIntoConstraints="NO" id="3eR-Rn-XpZ" userLabel="Preview" customClass="PreviewView" customModule="AVCam" customModuleProvider="target">
-                                <rect key="frame" x="44" y="0.0" width="724" height="375"/>
+                                <rect key="frame" x="0.0" y="0.0" width="375" height="812"/>
                                 <color key="backgroundColor" red="0.0" green="0.0" blue="0.0" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
                                 <gestureRecognizers/>
                                 <connections>
@@ -26,7 +24,7 @@
                                 </connections>
                             </view>
                             <segmentedControl opaque="NO" contentMode="scaleAspectFill" contentHorizontalAlignment="left" contentVerticalAlignment="top" segmentControlStyle="plain" selectedSegmentIndex="0" translatesAutoresizingMaskIntoConstraints="NO" id="FAC-co-10c" userLabel="Capture Mode">
-                                <rect key="frame" x="560" y="165.66666666666666" width="88" height="45"/>
+                                <rect key="frame" x="143.66666666666666" y="610" width="88" height="45"/>
                                 <constraints>
                                     <constraint firstAttribute="height" constant="44" id="AHK-CJ-BHq"/>
                                     <constraint firstAttribute="width" secondItem="FAC-co-10c" secondAttribute="height" multiplier="80:40" id="T01-Tu-2SF"/>
@@ -40,7 +38,7 @@
                                 </connections>
                             </segmentedControl>
                             <label hidden="YES" opaque="NO" clipsSubviews="YES" userInteractionEnabled="NO" contentMode="left" horizontalHuggingPriority="251" verticalHuggingPriority="251" text="Live" textAlignment="center" lineBreakMode="tailTruncation" baselineAdjustment="alignBaselines" adjustsFontSizeToFit="NO" translatesAutoresizingMaskIntoConstraints="NO" id="Pii-2r-R2l" userLabel="Capturing Live Photo">
-                                <rect key="frame" x="390.66666666666669" y="40" width="31" height="20.666666666666671"/>
+                                <rect key="frame" x="172" y="164" width="31" height="20.666666666666657"/>
                                 <fontDescription key="fontDescription" type="system" pointSize="17"/>
                                 <color key="textColor" red="1" green="1" blue="0.0" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
                                 <nil key="highlightedColor"/>
@@ -51,13 +49,13 @@
                                 </userDefinedRuntimeAttributes>
                             </label>
                             <label hidden="YES" userInteractionEnabled="NO" contentMode="left" horizontalHuggingPriority="251" verticalHuggingPriority="251" text="Camera Unavailable" textAlignment="center" lineBreakMode="tailTruncation" numberOfLines="0" baselineAdjustment="alignBaselines" adjustsFontSizeToFit="NO" translatesAutoresizingMaskIntoConstraints="NO" id="zf0-db-esM" userLabel="Camera Unavailable">
-                                <rect key="frame" x="304" y="173.33333333333334" width="204" height="28.666666666666657"/>
+                                <rect key="frame" x="84" y="391.66666666666669" width="207" height="28.666666666666686"/>
                                 <fontDescription key="fontDescription" type="system" pointSize="24"/>
                                 <color key="textColor" red="1" green="1" blue="0.0" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
                                 <nil key="highlightedColor"/>
                             </label>
-                            <button hidden="YES" opaque="NO" contentMode="scaleToFill" contentHorizontalAlignment="center" contentVerticalAlignment="center" buttonType="roundedRect" lineBreakMode="middleTruncation" translatesAutoresizingMaskIntoConstraints="NO" id="FZr-Ip-7WL" userLabel="Resume">
-                                <rect key="frame" x="324" y="168" width="164" height="39"/>
+                            <button hidden="YES" opaque="NO" contentMode="scaleToFill" contentHorizontalAlignment="center" contentVerticalAlignment="center" buttonType="system" lineBreakMode="middleTruncation" translatesAutoresizingMaskIntoConstraints="NO" id="FZr-Ip-7WL" userLabel="Resume">
+                                <rect key="frame" x="105" y="386.66666666666669" width="165" height="39"/>
                                 <fontDescription key="fontDescription" type="system" pointSize="24"/>
                                 <inset key="contentEdgeInsets" minX="10" minY="5" maxX="10" maxY="5"/>
                                 <state key="normal" title="Tap to resume">
@@ -73,7 +71,7 @@
                                 </connections>
                             </button>
                             <button opaque="NO" contentMode="scaleAspectFill" contentHorizontalAlignment="center" contentVerticalAlignment="center" lineBreakMode="middleTruncation" translatesAutoresizingMaskIntoConstraints="NO" id="eRT-dK-6dM" userLabel="Record">
-                                <rect key="frame" x="668" y="274" width="60" height="60"/>
+                                <rect key="frame" x="30" y="678" width="60" height="60"/>
                                 <state key="normal" image="CaptureVideo">
                                     <color key="titleShadowColor" red="0.5" green="0.5" blue="0.5" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
                                 </state>
@@ -87,7 +85,7 @@
                                 </connections>
                             </button>
                             <button opaque="NO" contentMode="scaleAspectFill" contentHorizontalAlignment="center" contentVerticalAlignment="center" lineBreakMode="middleTruncation" translatesAutoresizingMaskIntoConstraints="NO" id="uCj-6P-mHF" userLabel="Photo">
-                                <rect key="frame" x="668" y="157.66666666666666" width="60" height="60"/>
+                                <rect key="frame" x="157.66666666666666" y="678" width="60" height="60"/>
                                 <constraints>
                                     <constraint firstAttribute="height" constant="60" id="NtC-UN-gTs"/>
                                     <constraint firstAttribute="width" constant="60" id="dxU-UP-4Ae"/>
@@ -105,7 +103,7 @@
                                 </connections>
                             </button>
                             <button opaque="NO" contentMode="scaleAspectFill" contentHorizontalAlignment="center" contentVerticalAlignment="center" lineBreakMode="middleTruncation" translatesAutoresizingMaskIntoConstraints="NO" id="rUJ-G6-RPv" userLabel="Camera">
-                                <rect key="frame" x="668" y="20" width="60" height="60"/>
+                                <rect key="frame" x="285" y="678" width="60" height="60"/>
                                 <state key="normal" image="FlipCamera">
                                     <color key="titleShadowColor" red="0.5" green="0.5" blue="0.5" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
                                 </state>
@@ -119,7 +117,7 @@
                                 </connections>
                             </button>
                             <segmentedControl opaque="NO" contentMode="scaleToFill" contentHorizontalAlignment="left" contentVerticalAlignment="top" segmentControlStyle="plain" selectedSegmentIndex="1" translatesAutoresizingMaskIntoConstraints="NO" id="qQa-JZ-xq2">
-                                <rect key="frame" x="300" y="10" width="212" height="26"/>
+                                <rect key="frame" x="72.666666666666686" y="124" width="230" height="26"/>
                                 <constraints>
                                     <constraint firstAttribute="height" constant="25" id="5Jk-fK-ABH"/>
                                 </constraints>
@@ -133,7 +131,7 @@
                                 </connections>
                             </segmentedControl>
                             <button opaque="NO" contentMode="scaleAspectFill" contentHorizontalAlignment="center" contentVerticalAlignment="center" lineBreakMode="middleTruncation" translatesAutoresizingMaskIntoConstraints="NO" id="Kbl-qj-uoj" userLabel="SSM">
-                                <rect key="frame" x="64" y="32.666666666666664" width="50" height="49.999999999999993"/>
+                                <rect key="frame" x="295" y="59" width="50" height="50"/>
                                 <constraints>
                                     <constraint firstAttribute="height" constant="50" id="T0U-cL-mMw"/>
                                     <constraint firstAttribute="width" constant="50" id="fxH-PQ-9nB"/>
@@ -144,7 +142,7 @@
                                 </connections>
                             </button>
                             <button opaque="NO" contentMode="scaleAspectFill" contentHorizontalAlignment="center" contentVerticalAlignment="center" lineBreakMode="middleTruncation" translatesAutoresizingMaskIntoConstraints="NO" id="k2e-iy-hZx" userLabel="Portrait Effects Matte Delivery">
-                                <rect key="frame" x="64" y="124.66666666666669" width="50" height="50"/>
+                                <rect key="frame" x="212.66666666666666" y="64" width="49.999999999999972" height="50"/>
                                 <constraints>
                                     <constraint firstAttribute="width" constant="50" id="15L-jw-KI1"/>
                                     <constraint firstAttribute="height" constant="50" id="Rhs-tx-wuW"/>
@@ -160,7 +158,7 @@
                                 </connections>
                             </button>
                             <button opaque="NO" contentMode="scaleAspectFill" contentHorizontalAlignment="center" contentVerticalAlignment="center" lineBreakMode="middleTruncation" translatesAutoresizingMaskIntoConstraints="NO" id="9i1-NX-Qxg" userLabel="Depth Data Delivery">
-                                <rect key="frame" x="64" y="200.66666666666666" width="50" height="50"/>
+                                <rect key="frame" x="112.66666666666669" y="64" width="50" height="50"/>
                                 <constraints>
                                     <constraint firstAttribute="height" constant="50" id="DBZ-an-hCH"/>
                                     <constraint firstAttribute="width" constant="50" id="txq-sa-50i"/>
@@ -176,7 +174,7 @@
                                 </connections>
                             </button>
                             <button opaque="NO" contentMode="scaleAspectFill" contentHorizontalAlignment="center" contentVerticalAlignment="center" lineBreakMode="middleTruncation" translatesAutoresizingMaskIntoConstraints="NO" id="eI6-gV-W7d" userLabel="Live Photo Mode">
-                                <rect key="frame" x="64" y="274" width="50" height="50"/>
+                                <rect key="frame" x="30" y="64" width="50" height="50"/>
                                 <constraints>
                                     <constraint firstAttribute="width" constant="50" id="2OH-VU-h0R"/>
                                     <constraint firstAttribute="height" constant="50" id="XXa-hm-qsq"/>
@@ -191,9 +189,23 @@
                                     <action selector="toggleLivePhotoMode:" destination="BYZ-38-t0r" eventType="touchUpInside" id="JqX-wJ-Xf1"/>
                                 </connections>
                             </button>
+                            <button opaque="NO" contentMode="scaleToFill" contentHorizontalAlignment="center" contentVerticalAlignment="center" buttonType="system" lineBreakMode="middleTruncation" translatesAutoresizingMaskIntoConstraints="NO" id="t6u-H7-zPT" userLabel="HDR Video Mode">
+                                <rect key="frame" x="145" y="64" width="85.333333333333314" height="50"/>
+                                <constraints>
+                                    <constraint firstAttribute="height" constant="50" id="5rW-Y8-vgS"/>
+                                    <constraint firstAttribute="width" relation="greaterThanOrEqual" constant="80" id="iLS-gU-DSC"/>
+                                </constraints>
+                                <state key="normal" title="Button"/>
+                                <buttonConfiguration key="configuration" style="plain" title="HDR On"/>
+                                <connections>
+                                    <action selector="toggleHDRVideoMode:" destination="BYZ-38-t0r" eventType="touchUpInside" id="ELO-tQ-f71"/>
+                                </connections>
+                            </button>
                         </subviews>
+                        <viewLayoutGuide key="safeArea" id="nyU-fN-aJh"/>
                         <color key="backgroundColor" red="0.0" green="0.0" blue="0.0" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
                         <constraints>
+                            <constraint firstItem="t6u-H7-zPT" firstAttribute="centerX" secondItem="3eR-Rn-XpZ" secondAttribute="centerX" id="2iv-P4-SAP"/>
                             <constraint firstItem="k2e-iy-hZx" firstAttribute="top" secondItem="9i1-NX-Qxg" secondAttribute="top" id="6s5-Ib-dPR"/>
                             <constraint firstItem="rUJ-G6-RPv" firstAttribute="centerX" secondItem="eRT-dK-6dM" secondAttribute="centerX" id="7cz-Yw-dIv"/>
                             <constraint firstItem="3eR-Rn-XpZ" firstAttribute="trailing" secondItem="nyU-fN-aJh" secondAttribute="trailing" id="8ud-UI-Sfr"/>
@@ -239,6 +251,7 @@
                             <constraint firstItem="nyU-fN-aJh" firstAttribute="trailing" secondItem="Kbl-qj-uoj" secondAttribute="trailing" constant="30" id="dt1-Ck-Uqd"/>
                             <constraint firstItem="nyU-fN-aJh" firstAttribute="bottom" secondItem="uCj-6P-mHF" secondAttribute="bottom" constant="40" id="eWs-co-Aaz"/>
                             <constraint firstItem="3eR-Rn-XpZ" firstAttribute="bottom" secondItem="8bC-Xf-vdC" secondAttribute="bottom" id="ea0-4F-Kd7"/>
+                            <constraint firstItem="t6u-H7-zPT" firstAttribute="top" secondItem="nyU-fN-aJh" secondAttribute="top" constant="20" id="frI-Hw-TzA" userLabel="Hdr Video Mode.top = Safe Area.top + 20"/>
                             <constraint firstItem="3eR-Rn-XpZ" firstAttribute="centerY" secondItem="8bC-Xf-vdC" secondAttribute="centerY" id="igk-MQ-CGt"/>
                             <constraint firstItem="qQa-JZ-xq2" firstAttribute="bottom" secondItem="Pii-2r-R2l" secondAttribute="top" constant="-15" id="jBb-7k-Hkv">
                                 <variation key="heightClass=compact" constant="-5"/>
@@ -267,7 +280,6 @@
                             </constraint>
                             <constraint firstItem="k2e-iy-hZx" firstAttribute="centerX" secondItem="8bC-Xf-vdC" secondAttribute="centerX" id="zDr-9x-9rD"/>
                         </constraints>
-                        <viewLayoutGuide key="safeArea" id="nyU-fN-aJh"/>
                         <variation key="default">
                             <mask key="constraints">
                                 <exclude reference="GXb-vB-gbM"/>
@@ -276,6 +288,8 @@
                                 <exclude reference="dt1-Ck-Uqd"/>
                                 <exclude reference="vVo-dd-B0t"/>
                                 <exclude reference="Pm4-eO-sdY"/>
+                                <exclude reference="pd7-Dh-d2e"/>
+                                <exclude reference="q6Y-ZM-hP8"/>
                                 <exclude reference="EMU-8C-9iA"/>
                                 <exclude reference="GBQ-Hx-JcI"/>
                                 <exclude reference="Ohu-qM-uxp"/>
@@ -284,8 +298,6 @@
                                 <exclude reference="lKh-gu-ie2"/>
                                 <exclude reference="qD6-Cf-JXh"/>
                                 <exclude reference="zDr-9x-9rD"/>
-                                <exclude reference="pd7-Dh-d2e"/>
-                                <exclude reference="q6Y-ZM-hP8"/>
                                 <exclude reference="kgV-F4-efV"/>
                                 <exclude reference="Gy0-BP-eeb"/>
                                 <exclude reference="Ko6-t1-Mqg"/>
@@ -312,16 +324,16 @@
                                 <include reference="vVo-dd-B0t"/>
                                 <exclude reference="OfR-mz-BO3"/>
                                 <include reference="Pm4-eO-sdY"/>
-                                <exclude reference="6s5-Ib-dPR"/>
-                                <include reference="EMU-8C-9iA"/>
-                                <exclude reference="lKh-gu-ie2"/>
-                                <exclude reference="zDr-9x-9rD"/>
-                                <include reference="jBb-7k-Hkv"/>
                                 <exclude reference="SNY-VC-ohk"/>
                                 <exclude reference="ny4-fB-wQH"/>
                                 <include reference="pd7-Dh-d2e"/>
                                 <include reference="q6Y-ZM-hP8"/>
                                 <exclude reference="qVc-EN-il5"/>
+                                <include reference="jBb-7k-Hkv"/>
+                                <exclude reference="6s5-Ib-dPR"/>
+                                <include reference="EMU-8C-9iA"/>
+                                <exclude reference="lKh-gu-ie2"/>
+                                <exclude reference="zDr-9x-9rD"/>
                                 <include reference="kgV-F4-efV"/>
                                 <exclude reference="sNQ-wG-QKR"/>
                                 <exclude reference="Oow-A6-mDp"/>
@@ -371,6 +383,7 @@
                     <extendedEdge key="edgesForExtendedLayout"/>
                     <nil key="simulatedStatusBarMetrics"/>
                     <connections>
+                        <outlet property="HDRVideoModeButton" destination="t6u-H7-zPT" id="iUz-bk-gC1"/>
                         <outlet property="cameraButton" destination="rUJ-G6-RPv" id="dAV-WS-N1p"/>
                         <outlet property="cameraUnavailableLabel" destination="zf0-db-esM" id="P9W-lb-Pb8"/>
                         <outlet property="captureModeControl" destination="FAC-co-10c" id="KXj-wg-BvS"/>
@@ -393,9 +406,10 @@
                     </connections>
                 </tapGestureRecognizer>
             </objects>
-            <point key="canvasLocation" x="-656" y="-630"/>
+            <point key="canvasLocation" x="-656.79999999999995" y="-630.29556650246309"/>
         </scene>
     </scenes>
+    <color key="tintColor" red="1" green="1" blue="0.0" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
     <resources>
         <image name="CapturePhoto" width="150" height="150"/>
         <image name="CaptureVideo" width="150" height="150"/>
@@ -407,5 +421,4 @@
         <image name="PortraitMatteON" width="150" height="150"/>
         <image name="ssm" width="145" height="150"/>
     </resources>
-    <color key="tintColor" red="1" green="1" blue="0.0" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
 </document>
