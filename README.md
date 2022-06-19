@@ -645,3 +645,4 @@ if self.session.canAddOutput(movieFileOutput) {
 [image-2]:	Documentation/AVTimelineStill.png
 [image-3]:	Documentation/AVTimelineLive.png
 [image-4]:	Documentation/AVTimelineMovie.png
+# AVCamBuildingACameraApp
