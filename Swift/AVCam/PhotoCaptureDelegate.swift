@@ -7,6 +7,8 @@ The app's photo capture delegate object.
 
 import AVFoundation
 import Photos
+import UIKit
+import CoreImage
 
 class PhotoCaptureProcessor: NSObject {
     private(set) var requestedPhotoSettings: AVCapturePhotoSettings
@@ -117,7 +119,66 @@ extension PhotoCaptureProcessor: AVCapturePhotoCaptureDelegate {
             return
         }
         
+        
+        let inputImage = CIImage(cgImage: photo.cgImageRepresentation()!)
+        // Retrieve the photo orientation and apply it to the matte image.
+        var rect = CGRect(x: 0, y: 0, width: inputImage.extent.width, height: inputImage.extent.height)
+        if let orientation = photo.metadata[String(kCGImagePropertyOrientation)] as? UInt32,
+            let exifOrientation = CGImagePropertyOrientation(rawValue: orientation) {
+            // Apply the Exif orientation to the matte image.
+            segmentationMatte = segmentationMatte.applyingExifOrientation(exifOrientation)
+            inputImage.oriented(exifOrientation)
+        }
+        //var inputPixelBuffer = inputImage.pixelBuffer
+        rect = CGRect(x: 0, y: 0, width: inputImage.extent.width, height: inputImage.extent.height)
+        UIGraphicsBeginImageContext(rect.size)
+        let cgContext = UIGraphicsGetCurrentContext()
+        cgContext?.setFillColor(UIColor.blue.cgColor)
+        cgContext?.fill(rect)
+        guard let bgImage = UIGraphicsGetImageFromCurrentImageContext() else {
+            UIGraphicsEndImageContext()
+            return
+        }
+        UIGraphicsEndImageContext()
+        let background = CIImage(cgImage: bgImage.cgImage!)
+        let mask = CIImage(cvImageBuffer: segmentationMatte.mattingImage)
+        // Retrieve the photo orientation and apply it to the matte image.
+//        if let orientation = photo.metadata[String(kCGImagePropertyOrientation)] as? UInt32,
+//            let exifOrientation = CGImagePropertyOrientation(rawValue: orientation) {
+//            // Apply the Exif orientation to the matte image.
+//            background = background.applyingExifOrientation(exifOrientation)
+//        }
+//
+        let maskScaleX = inputImage.extent.width / mask.extent.width
+        let maskScaleY = inputImage.extent.width / mask.extent.width
+        let maskScaled = mask.transformed(by: __CGAffineTransformMake(maskScaleX, 0, 0, maskScaleY, 0, 0))
+        
+        let backgroundScaleX = inputImage.extent.width / background.extent.width
+        let backgroundScaleY = inputImage.extent.height / background.extent.height
+        let backgroundScaled = background.transformed(by: __CGAffineTransformMake(backgroundScaleX, 0, 0, backgroundScaleY, 0, 0))
+        // blendWithBlueMaskFilter
+        let blendFilter = CIFilter(name: "CIBlendWithMask")!
+        blendFilter.setValue(inputImage, forKey: "inputImage")
+        blendFilter.setValue(backgroundScaled, forKey: "inputBackgroundImage")
+        blendFilter.setValue(maskScaled, forKey: "inputMaskImage")
+        
         guard let perceptualColorSpace = CGColorSpace(name: CGColorSpace.sRGB) else { return }
+        
+        if let blendedImage = blendFilter.outputImage {
+            let ciContext = CIContext(options: nil)
+            //let filteredImageRef = ciContext.createCGImage(blendedImage, from: blendedImage.extent)
+            //let maskDisplayRef = ciContext.createCGImage(maskScaled, from: maskScaled.extent)
+            guard let imageData = ciContext.heifRepresentation(of: blendedImage,
+                                                             format: .RGBA8,
+                                                             colorSpace: perceptualColorSpace) else { return }
+            
+            // Add the image data to the SSM data array for writing to the photo library.
+            semanticSegmentationMatteDataArray.append(imageData)
+            return
+        }
+        
+        
+
         
         // Create a new CIImage from the matte's underlying CVPixelBuffer.
         let ciImage = CIImage( cvImageBuffer: segmentationMatte.mattingImage,
@@ -146,20 +207,67 @@ extension PhotoCaptureProcessor: AVCapturePhotoCaptureDelegate {
         }
         // A portrait effects matte gets generated only if AVFoundation detects a face.
         if var portraitEffectsMatte = photo.portraitEffectsMatte {
-            if let orientation = photo.metadata[ String(kCGImagePropertyOrientation) ] as? UInt32 {
-                portraitEffectsMatte = portraitEffectsMatte.applyingExifOrientation(CGImagePropertyOrientation(rawValue: orientation)!)
-            }
+
             let portraitEffectsMattePixelBuffer = portraitEffectsMatte.mattingImage
             let portraitEffectsMatteImage = CIImage( cvImageBuffer: portraitEffectsMattePixelBuffer, options: [ .auxiliaryPortraitEffectsMatte: true ] )
+            var inputImage = CIImage(cgImage: photo.cgImageRepresentation()!)
+            if let orientation = photo.metadata[ String(kCGImagePropertyOrientation) ] as? UInt32,
+               let exifOrientation = CGImagePropertyOrientation(rawValue: orientation) {
+                portraitEffectsMatte = portraitEffectsMatte.applyingExifOrientation(exifOrientation)
+                inputImage = inputImage.oriented(exifOrientation)
+            }
+            
+            let mask = CIImage(cvImageBuffer: portraitEffectsMatte.mattingImage)
+            let rect = CGRect(x: 0, y: 0, width: inputImage.extent.width, height: inputImage.extent.height)
+            UIGraphicsBeginImageContext(rect.size)
+            let cgContext = UIGraphicsGetCurrentContext()
+            cgContext?.setFillColor(UIColor.blue.cgColor)
+            cgContext?.fill(rect)
+            guard let bgImage = UIGraphicsGetImageFromCurrentImageContext() else {
+                UIGraphicsEndImageContext()
+                return
+            }
+            UIGraphicsEndImageContext()
+            let background = CIImage(cgImage: bgImage.cgImage!)
+            let maskScaleX = inputImage.extent.width / mask.extent.width
+            let maskScaleY = inputImage.extent.width / mask.extent.width
+            let maskScaled = mask.transformed(by: __CGAffineTransformMake(maskScaleX, 0, 0, maskScaleY, 0, 0))
+            
+            let backgroundScaleX = inputImage.extent.width / background.extent.width
+            let backgroundScaleY = inputImage.extent.height / background.extent.height
+            let backgroundScaled = background.transformed(by: __CGAffineTransformMake(backgroundScaleX, 0, 0, backgroundScaleY, 0, 0))
+            // blendWithBlueMaskFilter
+            let blendFilter = CIFilter(name: "CIBlendWithMask")!
+            blendFilter.setValue(inputImage, forKey: "inputImage")
+            blendFilter.setValue(backgroundScaled, forKey: "inputBackgroundImage")
+            blendFilter.setValue(maskScaled, forKey: "inputMaskImage")
+            
             
             guard let perceptualColorSpace = CGColorSpace(name: CGColorSpace.sRGB) else {
                 portraitEffectsMatteData = nil
                 return
             }
-            portraitEffectsMatteData = context.heifRepresentation(of: portraitEffectsMatteImage,
-                                                                  format: .RGBA8,
-                                                                  colorSpace: perceptualColorSpace,
-                                                                  options: [.portraitEffectsMatteImage: portraitEffectsMatteImage])
+            
+            if let blendedImage = blendFilter.outputImage {
+                let ciContext = CIContext(options: nil)
+                //let filteredImageRef = ciContext.createCGImage(blendedImage, from: blendedImage.extent)
+                //let maskDisplayRef = ciContext.createCGImage(maskScaled, from: maskScaled.extent)
+                guard let imageData = ciContext.heifRepresentation(of: blendedImage,
+                                                                 format: .RGBA8,
+                                                                 colorSpace: perceptualColorSpace) else { return }
+                
+                // Add the image data to the SSM data array for writing to the photo library.
+                //semanticSegmentationMatteDataArray.append(imageData)
+                portraitEffectsMatteData = imageData
+                return
+            } else {
+                portraitEffectsMatteData = context.heifRepresentation(of: portraitEffectsMatteImage,
+                                                                      format: .RGBA8,
+                                                                      colorSpace: perceptualColorSpace,
+                                                                      options: [.portraitEffectsMatteImage: portraitEffectsMatteImage])
+            }
+            
+
         } else {
             portraitEffectsMatteData = nil
         }
